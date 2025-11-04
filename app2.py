@@ -6,11 +6,9 @@ import json
 import os
 
 # ===========================
-# Load API Key
+# Load API Key (from Streamlit secrets)
 # ===========================
-with open("config.json") as f:
-    config = json.load(f)
-API_KEY = config["api_key"]
+API_KEY = st.secrets["api_keys"]["api_key"]
 
 DEFAULT_IMAGE = "https://via.placeholder.com/200x140.png?text=No+Image"
 
