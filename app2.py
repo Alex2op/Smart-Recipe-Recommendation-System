@@ -19,7 +19,9 @@ DEFAULT_IMAGE = "https://via.placeholder.com/200x140.png?text=No+Image"
 # ===========================
 @st.cache_data
 def load_recipes():
-    return pd.read_pickle("recipes_2M_cleaned.pkl").head(50000)
+    with open("recipes_25k.pkl", "rb") as f:
+        recipes = pd.read_pickle(f)
+    return recipes
 
 recipes_df = load_recipes()
 
@@ -63,7 +65,7 @@ if "user_taste" not in st.session_state:
     st.session_state.user_taste = load_user_taste()
 
 # ===========================
-# Fetch Recipes from Spoonacular API
+# Spoonacular API (Primary)
 # ===========================
 def get_recipes_from_api(ingredients, diet="None"):
     try:
@@ -100,7 +102,15 @@ def get_recipes_from_api(ingredients, diet="None"):
         return []
 
 # ===========================
-# Enrich Offline Recipe Info via API
+# Google Search Fallback
+# ===========================
+def google_search_link(recipe_name):
+    """Generate a Google search link for recipe instructions."""
+    query = recipe_name.replace(" ", "+") + "+recipe"
+    return f"https://www.google.com/search?q={query}"
+
+# ===========================
+# Enrich Offline Recipe (Optional)
 # ===========================
 def enrich_offline_recipe(recipe_name):
     try:
@@ -248,6 +258,7 @@ with tab1:
             cols = st.columns(2)
             for i, (_, row) in enumerate(offline.iterrows()):
                 img = f"https://source.unsplash.com/200x140/?food,{row['title'].replace(' ', '%20')}"
+                g_link = google_search_link(row['title'])
                 with cols[i % 2]:
                     st.markdown(f"""
                     <div class='recipe-card'>
@@ -255,6 +266,7 @@ with tab1:
                         <div class='recipe-title'>{row['title']}</div>
                         <div class='recipe-meta'>Ingredients: {', '.join(row['ingredients'][:6])}...</div>
                         <div class='recipe-meta'>Match Score: {round(row['Match Score'],2)}</div>
+                        <a href='{g_link}' target='_blank'>🔗 Google Recipe Instructions</a>
                     </div>
                     """, unsafe_allow_html=True)
                     if st.button(f"❤️ Like {row['title']}", key=f"off_{row['title']}"):
@@ -271,7 +283,7 @@ with tab1:
                                     "cuisines": "Not specified",
                                     "nutrition": "N/A",
                                     "image": img,
-                                    "sourceUrl": "#"
+                                    "sourceUrl": g_link
                                 })
                             save_user_taste(st.session_state.user_taste)
                             st.success(f"Saved {row['title']} to liked recipes!")
